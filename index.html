@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ef5350">
+  <title>マイポケモン図鑑</title>
+
+  <!-- PWA化のためのManifest設定 -->
+  <link rel="manifest" href='data:application/manifest+json,{
+    "name": "マイポケモン図鑑",
+    "short_name": "ポケ図鑑",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#f8f9fa",
+    "theme_color": "#ef5350",
+    "icons": [
+      {
+        "src": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      }
+    ]
+  }'>
+
+  <style>
+    /* ベーススタイル */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      background-color: #f8f9fa;
+      color: #333;
+      padding-bottom: 20px;
+    }
+
+    /* ヘッダー */
+    header {
+      background-color: #ef5350;
+      color: white;
+      text-align: center;
+      padding: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    header h1 {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+    }
+
+    /* 検索バー */
+    .search-box {
+      width: 90%;
+      max-width: 400px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 20px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    /* メインコンテンツ・グリッド表示 */
+    main {
+      padding: 16px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .pokemon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 12px;
+    }
+
+    /* ロード中メッセージ */
+    #loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 1.1rem;
+      color: #666;
+    }
+
+    /* ポケモンカード */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .card:active {
+      transform: scale(0.95);
+    }
+    .card .id {
+      font-size: 0.75rem;
+      color: #888;
+      position: absolute;
+      top: 6px;
+      left: 8px;
+    }
+    .card img {
+      width: 70px;
+      height: 70px;
+    }
+    .card .name {
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
+    /* タイプバッジ */
+    .types {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .type-badge {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+      color: white;
+      background-color: #888;
+    }
+
+    /* タイプ別の背景色定義 */
+    .type-grass { background-color: #78C850; }
+    .type-fire { background-color: #F08030; }
+    .type-water { background-color: #6890F0; }
+    .type-bug { background-color: #A8B820; }
+    .type-normal { background-color: #A8A878; }
+    .type-poison { background-color: #A040A0; }
+    .type-electric { background-color: #F8D030; color: #333; }
+    .type-ground { background-color: #E0C068; }
+    .type-fairy { background-color: #EE99AC; }
+    .type-fighting { background-color: #C03028; }
+    .type-psychic { background-color: #F85888; }
+    .type-rock { background-color: #B8A038; }
+    .type-ghost { background-color: #705898; }
+    .type-ice { background-color: #98D8D8; color: #333; }
+    .type-dragon { background-color: #7038F8; }
+
+    /* モーダル（詳細画面） */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      width: 85%;
+      max-width: 320px;
+      text-align: center;
+      position: relative;
+    }
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #aaa;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>マイポケモン図鑑</h1>
+    <input type="text" id="searchInput" class="search-box" placeholder="名前や番号で検索...">
+  </header>
+
+  <main>
+    <div id="loading">データを読み込み中...</div>
+    <div id="pokemonGrid" class="pokemon-grid"></div>
+  </main>
+
+  <!-- 詳細表示モーダル -->
+  <div id="detailModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" id="closeModal">&times;</span>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    const POKEMON_COUNT = 151; // カントー地方（初代151匹）
+    const pokemonGrid = document.getElementById('pokemonGrid');
+    const loading = document.getElementById('loading');
+    const searchInput = document.getElementById('searchInput');
+    const detailModal = document.getElementById('detailModal');
+    const modalBody = document.getElementById('modalBody');
+    const closeModal = document.getElementById('closeModal');
+
+    let allPokemonData = [];
+
+    // タイプ名の日本語変換辞書
+    const typeNamesJa = {
+      grass: 'くさ', fire: 'ほのお', water: 'みず', bug: 'むし',
+      normal: 'ノーマル', poison: 'どく', electric: 'でんき', ground: 'じめん',
+      fairy: 'フェアリー', fighting: 'かくとう', psychic: 'エスパー',
+      rock: 'いわ', ghost: 'ゴースト', ice: 'こおり', dragon: 'ドラゴン'
+    };
+
+    // 初期化：すべてのデータを並列で確実に取得する
+    async function init() {
+      try {
+        const promises = [];
+        for (let i = 1; i <= POKEMON_COUNT; i++) {
+          promises.push(fetchSinglePokemon(i));
+        }
+
+        // 151匹分のデータを並列取得完了まで待つ
+        allPokemonData = await Promise.all(promises);
+        
+        loading.style.display = 'none'; // ローディングメッセージ非表示
+        renderCards(allPokemonData);
+      } catch (err) {
+        console.error("データ取得エラー:", err);
+        loading.textContent = "データの読み込みに失敗しました。";
+      }
+    }
+
+    // 単一ポケモンのデータ（基本情報 ＋ 日本語名）をセットで取得
+    async function fetchSinglePokemon(id) {
+      // 1. 基本データ取得
+      const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+      const data = await res.json();
+
+      // 2. 種族データ（日本語名）取得
+      const speciesRes = await fetch(data.species.url);
+      const speciesData = await speciesRes.json();
+
+      // 日本語（カタカナまたはひらがな）を探す
+      const jaObj = speciesData.names.find(
+        n => n.language.name === 'ja-Hrkt' || n.language.name === 'ja'
+      );
+      const japaneseName = jaObj ? jaObj.name : data.name;
+
+      return {
+        id: data.id,
+        name: japaneseName,
+        image: data.sprites.front_default,
+        types: data.types.map(t => t.type.name),
+        height: data.height / 10, // dm -> m
+        weight: data.weight / 10, // hg -> kg
+        stats: data.stats
+      };
+    }
+
+    // カード一覧の描画
+    function renderCards(list) {
+      pokemonGrid.innerHTML = '';
+      list.forEach(pokemon => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.onclick = () => showDetail(pokemon);
+
+        const typesHTML = pokemon.types.map(type => {
+          const typeJa = typeNamesJa[type] || type;
+          return `<span class="type-badge type-${type}">${typeJa}</span>`;
+        }).join('');
+
+        card.innerHTML = `
+          <span class="id">#${String(pokemon.id).padStart(3, '0')}</span>
+          <img src="${pokemon.image}" alt="${pokemon.name}">
+          <div class="name">${pokemon.name}</div>
+          <div class="types">${typesHTML}</div>
+        `;
+
+        pokemonGrid.appendChild(card);
+      });
+    }
+
+    // 詳細モーダルの表示
+    function showDetail(pokemon) {
+      const typesHTML = pokemon.types.map(type => {
+        const typeJa = typeNamesJa[type] || type;
+        return `<span class="type-badge type-${type}">${typeJa}</span>`;
+      }).join('');
+
+      modalBody.innerHTML = `
+        <h2 style="margin-bottom: 5px;">${pokemon.name}</h2>
+        <p style="color:#888; font-size:0.8rem;">#${String(pokemon.id).padStart(3, '0')}</p>
+        <img src="${pokemon.image}" style="width:120px; height:120px;">
+        <div class="types" style="margin-bottom: 15px;">${typesHTML}</div>
+        <div class="stat-row"><span>高さ:</span><span>${pokemon.height} m</span></div>
+        <div class="stat-row"><span>重さ:</span><span>${pokemon.weight} kg</span></div>
+        <div class="stat-row"><span>HP:</span><span>${pokemon.stats[0].base_stat}</span></div>
+        <div class="stat-row"><span>こうげき:</span><span>${pokemon.stats[1].base_stat}</span></div>
+        <div class="stat-row"><span>ぼうぎょ:</span><span>${pokemon.stats[2].base_stat}</span></div>
+      `;
+      detailModal.style.display = 'flex';
+    }
+
+    // モーダル閉じるイベント
+    closeModal.onclick = () => detailModal.style.display = 'none';
+    window.onclick = (e) => { if (e.target === detailModal) detailModal.style.display = 'none'; };
+
+    // リアルタイム検索フィルター
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim().toLowerCase();
+      const filtered = allPokemonData.filter(p => 
+        p.name.includes(query) || String(p.id).includes(query)
+      );
+      renderCards(filtered);
+    });
+
+    // 起動
+    init();
+  </script>
+</body>
+</html>
