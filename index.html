@@ -5,12 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#ef5350">
   <title>マイポケモン図鑑</title>
-
-  <!-- PWA化のためのManifest設定 -->
   <link rel="manifest" href="manifest.json">
 
   <style>
-    /* ベーススタイル */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -23,34 +20,47 @@
       padding-bottom: 20px;
     }
 
-    /* ヘッダー */
     header {
       background-color: #ef5350;
       color: white;
       text-align: center;
-      padding: 16px;
+      padding: 16px 16px 12px;
       position: sticky;
       top: 0;
       z-index: 100;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     header h1 {
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       margin-bottom: 10px;
     }
 
-    /* 検索バー */
-    .search-box {
-      width: 90%;
-      max-width: 400px;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 20px;
-      font-size: 1rem;
-      outline: none;
+    .controls {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      max-width: 500px;
+      margin: 0 auto;
     }
 
-    /* メインコンテンツ・グリッド表示 */
+    .region-select, .search-box {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .region-select {
+      background-color: white;
+      color: #333;
+      font-weight: bold;
+      cursor: pointer;
+      max-width: 50%;
+    }
+    .search-box {
+      flex: 1;
+    }
+
     main {
       padding: 16px;
       max-width: 800px;
@@ -62,7 +72,6 @@
       gap: 12px;
     }
 
-    /* ロード中メッセージ */
     #loading {
       text-align: center;
       padding: 40px;
@@ -78,7 +87,7 @@
       text-align: center;
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: transform 0.2s;
       position: relative;
     }
     .card:active {
@@ -90,6 +99,17 @@
       position: absolute;
       top: 6px;
       left: 8px;
+    }
+    .card .fav-star {
+      position: absolute;
+      top: 4px;
+      right: 8px;
+      font-size: 1rem;
+      color: #ccc;
+      cursor: pointer;
+    }
+    .card .fav-star.active {
+      color: #ffb703;
     }
     .card img {
       width: 70px;
@@ -107,6 +127,7 @@
       justify-content: center;
       gap: 4px;
       margin-top: 4px;
+      flex-wrap: wrap;
     }
     .type-badge {
       font-size: 0.65rem;
@@ -116,7 +137,6 @@
       background-color: #888;
     }
 
-    /* タイプ別の背景色定義 */
     .type-grass { background-color: #78C850; }
     .type-fire { background-color: #F08030; }
     .type-water { background-color: #6890F0; }
@@ -132,8 +152,11 @@
     .type-ghost { background-color: #705898; }
     .type-ice { background-color: #98D8D8; color: #333; }
     .type-dragon { background-color: #7038F8; }
+    .type-dark { background-color: #705848; }
+    .type-steel { background-color: #B8B8D0; }
+    .type-flying { background-color: #A890F0; }
 
-    /* モーダル（詳細画面） */
+    /* モーダル */
     .modal {
       display: none;
       position: fixed;
@@ -168,13 +191,51 @@
       border-bottom: 1px solid #eee;
       padding-bottom: 4px;
     }
+
+    /* フォルム切替ボタン */
+    .form-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin: 10px 0;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    .form-btn {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border: 1px solid #ef5350;
+      background: white;
+      color: #ef5350;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .form-btn.active {
+      background: #ef5350;
+      color: white;
+    }
   </style>
 </head>
 <body>
 
   <header>
     <h1>マイポケモン図鑑</h1>
-    <input type="text" id="searchInput" class="search-box" placeholder="名前や番号で検索...">
+    <div class="controls">
+      <select id="regionSelect" class="region-select">
+        <option value="kanto">カントー (1-151)</option>
+        <option value="johto">ジョウト (152-251)</option>
+        <option value="hoenn">ホウエン (252-386)</option>
+        <option value="sinnoh">シンオウ (387-493)</option>
+        <option value="unova">イッシュ (494-649)</option>
+        <option value="kalos">カロス (650-721)</option>
+        <option value="alola">アローラ (722-809)</option>
+        <option value="galar">ガラル (810-905)</option>
+        <option value="paldea">パルデア (906-1025)</option>
+        <option value="favorites">★ お気に入り</option>
+      </select>
+      <input type="text" id="searchInput" class="search-box" placeholder="名前や番号で検索...">
+    </div>
   </header>
 
   <main>
@@ -182,7 +243,6 @@
     <div id="pokemonGrid" class="pokemon-grid"></div>
   </main>
 
-  <!-- 詳細表示モーダル -->
   <div id="detailModal" class="modal">
     <div class="modal-content">
       <span class="close-btn" id="closeModal">&times;</span>
@@ -191,74 +251,167 @@
   </div>
 
   <script>
-    const POKEMON_COUNT = 151; // カントー地方（初代151匹）
+    const REGIONS = {
+      kanto: { start: 1, end: 151 },
+      johto: { start: 152, end: 251 },
+      hoenn: { start: 252, end: 386 },
+      sinnoh: { start: 387, end: 493 },
+      unova: { start: 494, end: 649 },
+      kalos: { start: 650, end: 721 },
+      alola: { start: 722, end: 809 },
+      galar: { start: 810, end: 905 },
+      paldea: { start: 906, end: 1025 }
+    };
+
     const pokemonGrid = document.getElementById('pokemonGrid');
     const loading = document.getElementById('loading');
     const searchInput = document.getElementById('searchInput');
+    const regionSelect = document.getElementById('regionSelect');
     const detailModal = document.getElementById('detailModal');
     const modalBody = document.getElementById('modalBody');
     const closeModal = document.getElementById('closeModal');
 
-    let allPokemonData = [];
+    let loadedPokemon = {};
+    let currentList = [];
+    let favorites = JSON.parse(localStorage.getItem('poke_favs') || '[]');
 
-    // タイプ名の日本語変換辞書
     const typeNamesJa = {
       grass: 'くさ', fire: 'ほのお', water: 'みず', bug: 'むし',
       normal: 'ノーマル', poison: 'どく', electric: 'でんき', ground: 'じめん',
       fairy: 'フェアリー', fighting: 'かくとう', psychic: 'エスパー',
-      rock: 'いわ', ghost: 'ゴースト', ice: 'こおり', dragon: 'ドラゴン'
+      rock: 'いわ', ghost: 'ゴースト', ice: 'こおり', dragon: 'ドラゴン',
+      dark: 'あく', steel: 'はがね', flying: 'ひこう'
     };
 
-    // 初期化：すべてのデータを並列で確実に取得する
-    async function init() {
-      try {
+    // フォルム名の日本語変換ルール
+    function translateFormName(rawName) {
+      if (!rawName || rawName === '通常') return '通常';
+      
+      let name = rawName.toLowerCase();
+      
+      const translations = [
+        { en: 'mega-x', ja: 'メガX' },
+        { en: 'mega-y', ja: 'メガY' },
+        { en: 'mega', ja: 'メガ' },
+        { en: 'gmax', ja: 'キョダイマックス' },
+        { en: 'alola', ja: 'アローラ' },
+        { en: 'galar', ja: 'ガラル' },
+        { en: 'hisui', ja: 'ヒスイ' },
+        { en: 'paldea', ja: 'パルデア' },
+        { en: 'origin', ja: 'オリジン' },
+        { en: 'therian', ja: '霊獣' },
+        { en: 'incarnate', ja: '化身' },
+        { en: 'sky', ja: 'スカイ' },
+        { en: 'land', ja: 'ランド' },
+        { en: 'sunny', ja: 'たいよう' },
+        { en: 'rainy', ja: 'あままし' },
+        { en: 'snowy', ja: 'ゆきがくれ' },
+        { en: 'attack', ja: 'アタック' },
+        { en: 'defense', ja: 'ディフェンス' },
+        { en: 'speed', ja: 'スピード' },
+        { en: 'sandy', ja: 'すなち' },
+        { en: 'trash', ja: 'ゴミ' },
+        { en: 'heat', ja: 'ヒート' },
+        { en: 'wash', ja: 'ウォッシュ' },
+        { en: 'frost', ja: 'フロスト' },
+        { en: 'fan', ja: 'スピン' },
+        { en: 'mow', ja: 'カット' },
+        { en: 'crowned', ja: 'おうのすがた' },
+        { en: 'hero', ja: 'れきせんのゆうしゃ' },
+        { en: 'single-strike', ja: 'いちげき' },
+        { en: 'rapid-strike', ja: 'れんげき' }
+      ];
+
+      for (const t of translations) {
+        if (name.includes(t.en)) {
+          return t.ja;
+        }
+      }
+
+      // 特殊パターンがなければハイフン除去の上で大文字化
+      return rawName.replace(/-/g, ' ').toUpperCase();
+    }
+
+    async function loadRegion(regionKey) {
+      loading.style.display = 'block';
+      pokemonGrid.innerHTML = '';
+      searchInput.value = '';
+
+      if (regionKey === 'favorites') {
+        const favIds = favorites.sort((a, b) => a - b);
+        const promises = favIds.map(id => fetchSinglePokemon(id));
+        currentList = await Promise.all(promises);
+      } else {
+        const { start, end } = REGIONS[regionKey];
         const promises = [];
-        for (let i = 1; i <= POKEMON_COUNT; i++) {
+        for (let i = start; i <= end; i++) {
           promises.push(fetchSinglePokemon(i));
         }
+        currentList = await Promise.all(promises);
+      }
 
-        // 151匹分のデータを並列取得完了まで待つ
-        allPokemonData = await Promise.all(promises);
-        
-        loading.style.display = 'none'; // ローディングメッセージ非表示
-        renderCards(allPokemonData);
-      } catch (err) {
-        console.error("データ取得エラー:", err);
-        loading.textContent = "データの読み込みに失敗しました。";
+      loading.style.display = 'none';
+      renderCards(currentList);
+    }
+
+    async function fetchSinglePokemon(id) {
+      if (loadedPokemon[id]) return loadedPokemon[id];
+
+      try {
+        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+        const data = await res.json();
+
+        const speciesRes = await fetch(data.species.url);
+        const speciesData = await speciesRes.json();
+
+        const jaObj = speciesData.names.find(
+          n => n.language.name === 'ja-Hrkt' || n.language.name === 'ja'
+        );
+
+        const pokemon = {
+          id: data.id,
+          name: jaObj ? jaObj.name : data.name,
+          image: data.sprites.front_default || data.sprites.other?.['official-artwork']?.front_default || '',
+          types: data.types.map(t => t.type.name),
+          height: data.height / 10,
+          weight: data.weight / 10,
+          stats: data.stats,
+          varieties: speciesData.varieties
+        };
+
+        loadedPokemon[id] = pokemon;
+        return pokemon;
+      } catch (e) {
+        console.error(`ID: ${id} の取得に失敗しました`, e);
+        return { id, name: `No.${id}`, image: '', types: [], height: 0, weight: 0, stats: [{base_stat:0},{base_stat:0},{base_stat:0}], varieties: [] };
       }
     }
 
-    // 単一ポケモンのデータ（基本情報 ＋ 日本語名）をセットで取得
-    async function fetchSinglePokemon(id) {
-      // 1. 基本データ取得
-      const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-      const data = await res.json();
+    function toggleFavorite(e, id) {
+      e.stopPropagation();
+      if (favorites.includes(id)) {
+        favorites = favorites.filter(favId => favId !== id);
+      } else {
+        favorites.push(id);
+      }
+      localStorage.setItem('poke_favs', JSON.stringify(favorites));
 
-      // 2. 種族データ（日本語名）取得
-      const speciesRes = await fetch(data.species.url);
-      const speciesData = await speciesRes.json();
-
-      // 日本語（カタカナまたはひらがな）を探す
-      const jaObj = speciesData.names.find(
-        n => n.language.name === 'ja-Hrkt' || n.language.name === 'ja'
-      );
-      const japaneseName = jaObj ? jaObj.name : data.name;
-
-      return {
-        id: data.id,
-        name: japaneseName,
-        image: data.sprites.front_default,
-        types: data.types.map(t => t.type.name),
-        height: data.height / 10, // dm -> m
-        weight: data.weight / 10, // hg -> kg
-        stats: data.stats
-      };
+      if (regionSelect.value === 'favorites') {
+        loadRegion('favorites');
+      } else {
+        renderCards(currentList);
+      }
     }
 
-    // カード一覧の描画
     function renderCards(list) {
       pokemonGrid.innerHTML = '';
+      if (list.length === 0) {
+        pokemonGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">該当するポケモンが見つかりません</div>';
+        return;
+      }
+
       list.forEach(pokemon => {
+        const isFav = favorites.includes(pokemon.id);
         const card = document.createElement('div');
         card.className = 'card';
         card.onclick = () => showDetail(pokemon);
@@ -270,6 +423,7 @@
 
         card.innerHTML = `
           <span class="id">#${String(pokemon.id).padStart(3, '0')}</span>
+          <span class="fav-star ${isFav ? 'active' : ''}" onclick="toggleFavorite(event, ${pokemon.id})">★</span>
           <img src="${pokemon.image}" alt="${pokemon.name}">
           <div class="name">${pokemon.name}</div>
           <div class="types">${typesHTML}</div>
@@ -279,42 +433,73 @@
       });
     }
 
-    // 詳細モーダルの表示
-    function showDetail(pokemon) {
-      const typesHTML = pokemon.types.map(type => {
+    async function showDetail(pokemon, formUrl = null) {
+      let activeData = pokemon;
+
+      if (formUrl) {
+        const res = await fetch(formUrl);
+        const data = await res.json();
+        activeData = {
+          name: pokemon.name,
+          image: data.sprites.front_default || data.sprites.other?.['official-artwork']?.front_default || pokemon.image,
+          types: data.types.map(t => t.type.name),
+          height: data.height / 10,
+          weight: data.weight / 10,
+          stats: data.stats
+        };
+      }
+
+      const typesHTML = activeData.types.map(type => {
         const typeJa = typeNamesJa[type] || type;
         return `<span class="type-badge type-${type}">${typeJa}</span>`;
       }).join('');
 
+      let formButtonsHTML = '';
+      if (pokemon.varieties && pokemon.varieties.length > 1) {
+        formButtonsHTML = '<div class="form-buttons">' + pokemon.varieties.map(v => {
+          let rawLabel = v.pokemon.name.replace(`${pokemon.id}`, '').replace(pokemon.name.toLowerCase(), '').replace('-', ' ').trim();
+          let label = translateFormName(rawLabel);
+
+          const isActive = (formUrl === v.pokemon.url) || (!formUrl && v.is_default);
+          
+          return `<button class="form-btn ${isActive ? 'active' : ''}" onclick="changeForm(${pokemon.id}, '${v.pokemon.url}')">${label}</button>`;
+        }).join('') + '</div>';
+      }
+
       modalBody.innerHTML = `
         <h2 style="margin-bottom: 5px;">${pokemon.name}</h2>
         <p style="color:#888; font-size:0.8rem;">#${String(pokemon.id).padStart(3, '0')}</p>
-        <img src="${pokemon.image}" style="width:120px; height:120px;">
+        <img src="${activeData.image}" style="width:120px; height:120px;">
+        ${formButtonsHTML}
         <div class="types" style="margin-bottom: 15px;">${typesHTML}</div>
-        <div class="stat-row"><span>高さ:</span><span>${pokemon.height} m</span></div>
-        <div class="stat-row"><span>重さ:</span><span>${pokemon.weight} kg</span></div>
-        <div class="stat-row"><span>HP:</span><span>${pokemon.stats[0].base_stat}</span></div>
-        <div class="stat-row"><span>こうげき:</span><span>${pokemon.stats[1].base_stat}</span></div>
-        <div class="stat-row"><span>ぼうぎょ:</span><span>${pokemon.stats[2].base_stat}</span></div>
+        <div class="stat-row"><span>高さ:</span><span>${activeData.height} m</span></div>
+        <div class="stat-row"><span>重さ:</span><span>${activeData.weight} kg</span></div>
+        <div class="stat-row"><span>HP:</span><span>${activeData.stats[0]?.base_stat || 0}</span></div>
+        <div class="stat-row"><span>こうげき:</span><span>${activeData.stats[1]?.base_stat || 0}</span></div>
+        <div class="stat-row"><span>ぼうぎょ:</span><span>${activeData.stats[2]?.base_stat || 0}</span></div>
       `;
       detailModal.style.display = 'flex';
     }
 
-    // モーダル閉じるイベント
+    window.changeForm = (pokemonId, url) => {
+      const pokemon = loadedPokemon[pokemonId];
+      if (pokemon) showDetail(pokemon, url);
+    };
+
     closeModal.onclick = () => detailModal.style.display = 'none';
     window.onclick = (e) => { if (e.target === detailModal) detailModal.style.display = 'none'; };
 
-    // リアルタイム検索フィルター
+    regionSelect.addEventListener('change', (e) => loadRegion(e.target.value));
+
     searchInput.addEventListener('input', (e) => {
       const query = e.target.value.trim().toLowerCase();
-      const filtered = allPokemonData.filter(p => 
+      const filtered = currentList.filter(p => 
         p.name.includes(query) || String(p.id).includes(query)
       );
       renderCards(filtered);
     });
 
-    // 起動
-    init();
+    loadRegion('kanto');
   </script>
 </body>
 </html>
