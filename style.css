@@ -1,0 +1,239 @@
+/* ==========================================================================
+   Base & Reset
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background-color: #f8f9fa;
+  color: #333;
+  padding-bottom: 20px;
+}
+
+main {
+  padding: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+/* ==========================================================================
+   Header & Controls
+   ========================================================================== */
+header {
+  background-color: #ef5350;
+  color: white;
+  text-align: center;
+  padding: 16px 16px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+header h1 {
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.region-select,
+.search-box {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.region-select {
+  background-color: white;
+  color: #333;
+  font-weight: bold;
+  cursor: pointer;
+  max-width: 50%;
+}
+
+.search-box {
+  flex: 1;
+}
+
+/* ==========================================================================
+   Pokemon Grid & Card
+   ========================================================================== */
+.pokemon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.2s;
+  position: relative;
+}
+
+.card:active {
+  transform: scale(0.95);
+}
+
+.card .id {
+  font-size: 0.75rem;
+  color: #888;
+  position: absolute;
+  top: 6px;
+  left: 8px;
+}
+
+.card .fav-star {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-size: 1rem;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.card .fav-star.active {
+  color: #ffb703;
+}
+
+.card img {
+  width: 70px;
+  height: 70px;
+}
+
+.card .name {
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   Type Badges
+   ========================================================================== */
+.types {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.type-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: white;
+  background-color: #888;
+}
+
+.type-grass    { background-color: #78C850; }
+.type-fire     { background-color: #F08030; }
+.type-water    { background-color: #6890F0; }
+.type-bug      { background-color: #A8B820; }
+.type-normal   { background-color: #A8A878; }
+.type-poison   { background-color: #A040A0; }
+.type-electric { background-color: #F8D030; color: #333; }
+.type-ground   { background-color: #E0C068; }
+.type-fairy    { background-color: #EE99AC; }
+.type-fighting { background-color: #C03028; }
+.type-psychic  { background-color: #F85888; }
+.type-rock     { background-color: #B8A038; }
+.type-ghost    { background-color: #705898; }
+.type-ice      { background-color: #98D8D8; color: #333; }
+.type-dragon   { background-color: #7038F8; }
+.type-dark     { background-color: #705848; }
+.type-steel    { background-color: #B8B8D0; }
+.type-flying   { background-color: #A890F0; }
+
+/* ==========================================================================
+   Modal & Form Buttons
+   ========================================================================== */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  width: 85%;
+  max-width: 320px;
+  text-align: center;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #aaa;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
+}
+
+.form-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 10px 0;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.form-btn {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border: 1px solid #ef5350;
+  background: white;
+  color: #ef5350;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.form-btn.active {
+  background: #ef5350;
+  color: white;
+}
