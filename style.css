@@ -237,3 +237,65 @@ header h1 {
   background: #ef5350;
   color: white;
 }
+
+/* ==========================================================================
+   Evolution Chain (進化チャート)
+   ========================================================================== */
+.evolution-section {
+  margin-top: 15px;
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+}
+
+.evolution-title {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.evolution-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.evo-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  min-width: 60px;
+}
+
+.evo-node:hover {
+  background: #f0f0f0;
+}
+
+.evo-node.current {
+  background: #ffebee;
+  border: 1px solid #ef5350;
+}
+
+.evo-node img {
+  width: 48px;
+  height: 48px;
+}
+
+.evo-node .evo-name {
+  font-size: 0.7rem;
+  color: #333;
+  margin-top: 2px;
+}
+
+.evo-arrow {
+  font-size: 0.8rem;
+  color: #aaa;
+  font-weight: bold;
+}

@@ -40,10 +40,14 @@ const statNamesJa = {
 };
 
 function translateFormName(rawName) {
-  if (!rawName || rawName === '通常' || rawName.trim() === '') return '通常';
+  if (!rawName || rawName.trim() === '') return '通常';
   
-  const name = rawName.toLowerCase().replace(/_/g, '-');
+  const name = rawName.toLowerCase().replace(/_/g, '-').trim();
   
+  if (name === 'normal' || name === 'ordinary' || name === 'standard' || name === 'altered') {
+    return '通常';
+  }
+
   const dictionary = [
     { key: 'heat', val: 'ヒート' },
     { key: 'wash', val: 'ウォッシュ' },
@@ -148,7 +152,8 @@ async function fetchSinglePokemon(id) {
       weight: data.weight / 10,
       stats: data.stats,
       abilities: abilities,
-      varieties: speciesData.varieties
+      varieties: speciesData.varieties,
+      evolutionChainUrl: speciesData.evolution_chain?.url
     };
 
     loadedPokemon[id] = pokemon;
@@ -158,6 +163,74 @@ async function fetchSinglePokemon(id) {
     return { id, name: `No.${id}`, image: '', types: [], height: 0, weight: 0, stats: [], abilities: [], varieties: [] };
   }
 }
+
+// 進化チェーンデータを再帰的に解析して配列化する関数
+function parseEvolutionChain(chainNode, result = []) {
+  const speciesUrl = chainNode.species.url;
+  const idMatch = speciesUrl.match(/\/pokemon-species\/(\d+)\//);
+  const id = idMatch ? parseInt(idMatch[1], 10) : null;
+
+  result.push({
+    id: id,
+    name: chainNode.species.name,
+    evolvesTo: chainNode.evolves_to.map(next => parseEvolutionChain(next, []))
+  });
+
+  return result;
+}
+
+// 進化チャートのHTMLを動的生成
+async function renderEvolutionChain(evolutionChainUrl, currentId) {
+  if (!evolutionChainUrl) return '';
+
+  try {
+    const res = await fetch(evolutionChainUrl);
+    const data = await res.json();
+    const parsed = parseEvolutionChain(data.chain);
+
+    // リスト構造を水平フローのHTMLに変換
+    let html = '<div class="evolution-section"><div class="evolution-title">しんかルート</div><div class="evolution-container">';
+
+    async function buildNodesHTML(nodes) {
+      let segment = '';
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        if (!node[0]) continue;
+        const target = node[0];
+
+        if (target.id) {
+          const pokeData = await fetchSinglePokemon(target.id);
+          const isCurrent = target.id === currentId;
+
+          segment += `
+            <div class="evo-node ${isCurrent ? 'current' : ''}" onclick="goToPokemon(${target.id})">
+              <img src="${pokeData.image}" alt="${pokeData.name}">
+              <span class="evo-name">${pokeData.name}</span>
+            </div>
+          `;
+
+          if (target.evolvesTo && target.evolvesTo.length > 0) {
+            segment += '<span class="evo-arrow">➔</span>';
+            segment += await buildNodesHTML(target.evolvesTo);
+          }
+        }
+      }
+      return segment;
+    }
+
+    html += await buildNodesHTML([parsed]);
+    html += '</div></div>';
+    return html;
+  } catch (e) {
+    console.error('進化データの取得に失敗:', e);
+    return '';
+  }
+}
+
+window.goToPokemon = async (id) => {
+  const pokemon = await fetchSinglePokemon(id);
+  if (pokemon) showDetail(pokemon);
+};
 
 function toggleFavorite(e, id) {
   e.stopPropagation();
@@ -265,11 +338,12 @@ async function showDetail(pokemon, formUrl = null) {
   let formButtonsHTML = '';
   if (pokemon.varieties && pokemon.varieties.length > 1) {
     formButtonsHTML = '<div class="form-buttons">' + pokemon.varieties.map(v => {
-      let rawLabel = v.pokemon.name.replace(`${pokemon.id}`, '').replace(pokemon.name.toLowerCase(), '').replace('-', ' ').trim();
-      let label = translateFormName(rawLabel);
-
+      let label = '通常';
+      if (!v.is_default) {
+        let rawLabel = v.pokemon.name.replace(`${pokemon.id}`, '').replace(pokemon.name.toLowerCase(), '').replace(/-/g, ' ').trim();
+        label = translateFormName(rawLabel);
+      }
       const isActive = (formUrl === v.pokemon.url) || (!formUrl && v.is_default);
-      
       return `<button class="form-btn ${isActive ? 'active' : ''}" onclick="changeForm(${pokemon.id}, '${v.pokemon.url}')">${label}</button>`;
     }).join('') + '</div>';
   }
@@ -283,6 +357,9 @@ async function showDetail(pokemon, formUrl = null) {
     return `<div class="stat-row"><span>${statName}:</span><span>${s.base_stat}</span></div>`;
   }).join('');
 
+  // 進化チャートの取得
+  const evoHTML = await renderEvolutionChain(pokemon.evolutionChainUrl, pokemon.id);
+
   modalBody.innerHTML = `
     <h2 style="margin-bottom: 5px;">${displayName}</h2>
     <p style="color:#888; font-size:0.8rem;">#${String(pokemon.id).padStart(3, '0')}</p>
@@ -293,6 +370,7 @@ async function showDetail(pokemon, formUrl = null) {
     <div class="stat-row"><span>おもさ:</span><span>${activeData.weight} kg</span></div>
     ${statsHTML}
     <div class="stat-row" style="margin-top: 10px;"><span>とくせい:</span><span>${abilitiesHTML}</span></div>
+    ${evoHTML}
   `;
   detailModal.style.display = 'flex';
 }
