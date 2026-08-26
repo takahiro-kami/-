@@ -13,6 +13,7 @@
   <header>
     <h1>マイポケモン図鑑</h1>
     <div class="controls">
+      
       <select id="regionSelect" class="region-select">
         <option value="kanto">カントー (1-151)</option>
         <option value="johto">ジョウト (152-251)</option>
@@ -27,6 +28,15 @@
       </select>
       <input type="text" id="searchInput" class="search-box" placeholder="名前や番号で検索...">
     </div>
+    <!-- コントロールエリアの下に追加 -->
+    <div class="progress-section">
+    <div class="progress-label">
+    <span id="progressText">進捗度: 0 / 0 (0%)</span>
+    </div>  
+  <div class="progress-bar-container">
+    <div id="progressBar" class="progress-bar-fill" style="width: 0%;"></div>
+  </div>
+</div>
   </header>
 
   <main>

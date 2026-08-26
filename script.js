@@ -90,6 +90,44 @@ function translateFormName(rawName) {
   return '通常';
 }
 
+// 進捗度（プログレスバー）を更新する関数
+function updateProgress() {
+  const currentRegion = regionSelect.value;
+  const progressText = document.getElementById('progressText');
+  const progressBar = document.getElementById('progressBar');
+
+  if (!progressText || !progressBar) return;
+
+  if (currentRegion === 'favorites') {
+    const totalFavs = favorites.length;
+    progressText.textContent = `お気に入り登録数: ${totalFavs} 匹`;
+    progressBar.style.width = totalFavs > 0 ? '100%' : '0%';
+    return;
+  }
+
+  const { start, end } = REGIONS[currentRegion];
+  const totalInRegion = (end - start) + 1;
+  
+  // 現在選択中の地方で「お気に入り（獲得済み）」に登録されている数をカウント
+  let caughtInRegion = 0;
+  for (let id = start; id <= end; id++) {
+    if (favorites.includes(id)) {
+      caughtInRegion++;
+    }
+  }
+
+  const percentage = Math.round((caughtInRegion / totalInRegion) * 100);
+  const regionNamesJa = {
+    kanto: 'カントー地方', johto: 'ジョウト地方', hoenn: 'ホウエン地方',
+    sinnoh: 'シンオウ地方', unova: 'イッシュ地方', kalos: 'カロス地方',
+    alola: 'アローラ地方', galar: 'ガラル地方', paldea: 'パルデア地方'
+  };
+
+  const regionName = regionNamesJa[currentRegion] || '選択地域';
+  progressText.textContent = `${regionName}: ${caughtInRegion} / ${totalInRegion} 匹 (${percentage}%)`;
+  progressBar.style.width = `${percentage}%`;
+}
+
 async function loadRegion(regionKey) {
   loading.style.display = 'block';
   pokemonGrid.innerHTML = '';
@@ -147,6 +185,7 @@ async function fetchSinglePokemon(id) {
       id: data.id,
       name: jaObj ? jaObj.name : data.name,
       image: data.sprites.front_default || data.sprites.other?.['official-artwork']?.front_default || '',
+      shinyImage: data.sprites.front_shiny || data.sprites.other?.['official-artwork']?.front_shiny || '',
       types: data.types.map(t => t.type.name),
       height: data.height / 10,
       weight: data.weight / 10,
@@ -163,6 +202,24 @@ async function fetchSinglePokemon(id) {
     return { id, name: `No.${id}`, image: '', types: [], height: 0, weight: 0, stats: [], abilities: [], varieties: [] };
   }
 }
+
+// 色違い画像と通常画像を切り替えるグローバル関数
+window.toggleShiny = (normalUrl, shinyUrl) => {
+  const imgElem = document.getElementById('modalPokemonImg');
+  const btnElem = document.getElementById('shinyToggleBtn');
+  if (!imgElem || !btnElem) return;
+
+  const isShiny = btnElem.classList.contains('active');
+  if (isShiny) {
+    imgElem.src = normalUrl;
+    btnElem.classList.remove('active');
+    btnElem.textContent = '✨ 色違い表示';
+  } else {
+    imgElem.src = shinyUrl || normalUrl;
+    btnElem.classList.add('active');
+    btnElem.textContent = '✨ 通常色に戻す';
+  }
+};
 
 // 進化チェーンデータを再帰的に解析して配列化する関数
 function parseEvolutionChain(chainNode, result = []) {
@@ -249,6 +306,7 @@ function toggleFavorite(e, id) {
 }
 
 function filterAndRender() {
+  updateProgress();
   const query = searchInput.value.trim().toLowerCase();
   const filtered = currentList.filter(p => 
     p.name.includes(query) || String(p.id).includes(query)
@@ -322,6 +380,7 @@ async function showDetail(pokemon, formUrl = null) {
     activeData = {
       name: displayName,
       image: data.sprites.front_default || data.sprites.other?.['official-artwork']?.front_default || pokemon.image,
+      shinyImage: data.sprites.front_shiny || data.sprites.other?.['official-artwork']?.front_shiny || pokemon.shinyImage,
       types: data.types.map(t => t.type.name),
       height: data.height / 10,
       weight: data.weight / 10,
@@ -360,18 +419,26 @@ async function showDetail(pokemon, formUrl = null) {
   // 進化チャートの取得
   const evoHTML = await renderEvolutionChain(pokemon.evolutionChainUrl, pokemon.id);
 
+  const shinyBtnHTML = activeData.shinyImage 
+  ? `<button id="shinyToggleBtn" class="shiny-btn" onclick="toggleShiny('${activeData.image}', '${activeData.shinyImage}')">✨ 色違い表示</button>`
+  : '';
   modalBody.innerHTML = `
-    <h2 style="margin-bottom: 5px;">${displayName}</h2>
-    <p style="color:#888; font-size:0.8rem;">#${String(pokemon.id).padStart(3, '0')}</p>
-    <img src="${activeData.image}" style="width:120px; height:120px;">
-    ${formButtonsHTML}
-    <div class="types" style="margin-bottom: 15px;">${typesHTML}</div>
-    <div class="stat-row"><span>たかさ:</span><span>${activeData.height} m</span></div>
-    <div class="stat-row"><span>おもさ:</span><span>${activeData.weight} kg</span></div>
-    ${statsHTML}
-    <div class="stat-row" style="margin-top: 10px;"><span>とくせい:</span><span>${abilitiesHTML}</span></div>
-    ${evoHTML}
-  `;
+  <h2 style="margin-bottom: 5px;">${displayName}</h2>
+  <p style="color:#888; font-size:0.8rem;">#${String(pokemon.id).padStart(3, '0')}</p>
+  
+  <div class="modal-image-container">
+    <img id="modalPokemonImg" src="${activeData.image}" style="width:120px; height:120px;">
+    ${shinyBtnHTML}
+  </div>
+
+  ${formButtonsHTML}
+  <div class="types" style="margin-bottom: 15px;">${typesHTML}</div>
+  <div class="stat-row"><span>たかさ:</span><span>${activeData.height} m</span></div>
+  <div class="stat-row"><span>おもさ:</span><span>${activeData.weight} kg</span></div>
+  ${statsHTML}
+  <div class="stat-row" style="margin-top: 10px;"><span>とくせい:</span><span>${abilitiesHTML}</span></div>
+  ${evoHTML}
+`;
   detailModal.style.display = 'flex';
 }
 
